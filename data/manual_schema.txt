@@ -1,0 +1,31 @@
+Metadata for flower (flor) data sheets: 
+sample-name (flower): f{name}_d{date}_p{planta}_t{tratamento}_pc{parcela}_r{ramo}_n{no}
+features (flower): s1, s2, s3, s4, s5, s6, flor, star, chumb, fruto, rv
+
+Metadata for fruits (fruto) data sheets:
+sample-name (fruit): f{name}_d{date}_p{planta}_t{tratamento}_b{bloco}_r{ramo}_n{no}
+features (fruit): s1_flor_gemas, s1_flor_star, s1_flor_chumb, fruto_verde, fruto_parcial, fruto_vermelho, fruto_passa, fruto_secos, rv
+
+Where to get the sample names:
+- Fazenda and Date -> split the sheet name in the "_":
+fazenda (f): sheet name (before underscore)
+date (d): sheet name (after underscore)
+
+- tratamento: T1, T2, etc...
+
+- parcela: 1, 2, 3, etc...
+
+- ramo: Dir. and Esq. (format without points)
+
+- no: 1, 2, 3 (for Dir.) and 1, 2, 3 (for Esq.)
+
+The features:
+
+- flowers: more straight forward, follow the sequence and is fine. There are three plants, read from the first row.
+
+- fruits: There is an extra row between planta id and the features, which is to identify the features (mixed flowers and fruits annotations in fruit data).
+
+Data format:
+Stage counts: int
+date: date format
+
