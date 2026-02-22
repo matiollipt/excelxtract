@@ -98,15 +98,18 @@ def analyze(
         help="Directory to save analysis reports",
     ),
 ):
-    """Generate analysis reports from processed data."""
+    """Generate professional analysis reports (Individual & Global)."""
     typer.echo(f"Looking for data in {ml_dir}...")
 
     if not os.path.exists(ml_dir):
         typer.secho(f"Error: ML directory '{ml_dir}' not found.", fg=typer.colors.RED)
         raise typer.Exit(code=1)
 
-    found_data = False
-    for item in os.listdir(ml_dir):
+    all_flor = []
+    all_fruto = []
+    
+    # Process individual fazendas
+    for item in sorted(os.listdir(ml_dir)):
         faz_path = os.path.join(ml_dir, item)
         if os.path.isdir(faz_path):
             fazenda = item
@@ -115,24 +118,35 @@ def analyze(
             flor_path = os.path.join(faz_path, f"{fazenda}_flor_data.csv")
             fruto_path = os.path.join(faz_path, f"{fazenda}_fruto_data.csv")
 
-            df_flor = (
-                pd.read_csv(flor_path) if os.path.exists(flor_path) else pd.DataFrame()
-            )
-            df_fruto = (
-                pd.read_csv(fruto_path)
-                if os.path.exists(fruto_path)
-                else pd.DataFrame()
-            )
+            df_flor = pd.read_csv(flor_path) if os.path.exists(flor_path) else pd.DataFrame()
+            df_fruto = pd.read_csv(fruto_path) if os.path.exists(fruto_path) else pd.DataFrame()
 
             if not df_flor.empty or not df_fruto.empty:
-                found_data = True
+                if not df_flor.empty: all_flor.append(df_flor)
+                if not df_fruto.empty: all_fruto.append(df_fruto)
+                
                 faz_analysis_dir = os.path.join(output_dir, fazenda)
                 generate_report(df_flor, df_fruto, output_dir=faz_analysis_dir)
-                typer.echo(f"  Report saved to {faz_analysis_dir}")
+                typer.echo(f"  Individual report saved: {faz_analysis_dir}")
             else:
                 typer.echo(f"  No data files found for {fazenda}")
 
-    if not found_data:
+    # Generate Global Profile
+    if all_flor or all_fruto:
+        typer.echo("\nGenerating Global Comparative Profile (All Fazendas)...")
+        global_df_flor = pd.concat(all_flor, ignore_index=True) if all_flor else pd.DataFrame()
+        global_df_fruto = pd.concat(all_fruto, ignore_index=True) if all_fruto else pd.DataFrame()
+        
+        global_dir = os.path.join(output_dir, "global_profile")
+        generate_report(
+            global_df_flor, 
+            global_df_fruto, 
+            output_dir=global_dir,
+            facet_col="date",
+            row_facet="fazenda"
+        )
+        typer.secho(f"Global profile successfully generated in {global_dir}", fg=typer.colors.CYAN)
+    else:
         typer.secho("No valid data found to analyze.", fg=typer.colors.YELLOW)
 
 

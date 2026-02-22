@@ -110,7 +110,7 @@ def extract_meta_from_filename(filename: str) -> Tuple[str, str]:
 
     try:
         date_val = datetime.strptime(date_str, "%d%m%y").strftime("%Y-%m-%d")
-    except:
+    except (ValueError, TypeError):
         date_val = date_str
 
     return fazenda, date_val

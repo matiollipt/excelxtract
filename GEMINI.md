@@ -42,6 +42,23 @@ The `excelxtract` CLI implements these rules via distinct subcommands:
 
 *   **`extract`**: Handles **Sheet Classification** (Rule 1) and **Row Filtering** (Rule 2). It iterates through the workbook, identifies relevant sheets, and exports them to CSV.
 *   **`process`**: Implements **Data Cleaning** (Rule 3) and **Key Data Points** extraction (Rule 4). It uses the configuration in `src/excelxtract/config.py` to map columns and plant blocks.
-*   **`analyze`**: Generates the visual reports described in the methodology.
+*   **`analyze`**: Generates professional visual reports and performs unsupervised learning. It aggregates data across individual fazendas and produces a global comparative profile.
 
 To customize the column mappings (e.g., if the Excel layout changes), modify `src/excelxtract/config.py`.
+
+## 6. Advanced Analysis & Professional Reporting
+
+The analysis pipeline (`analyze` subcommand) is designed for professional-grade data science insights:
+
+### A. Professional Visualization Suite
+*   **Styled Theming:** Uses `seaborn` with `whitegrid` theme and `viridis` colormap for publication-quality output.
+*   **Faceted Evolution Plots:** Visualizes developmental stages across multiple dimensions (e.g., `date` vs `fazenda`) using `FacetGrid`.
+*   **Complete Phenological Profiles:** Generates aggregated totals for the entire observation period, providing a clear "fingerprint" for each treatment.
+
+### B. Unsupervised Learning Pipeline
+*   **PCA Grid Search:** Automatically iterates through different feature subsets (Full Set, Core Stages, High-Variance features) to identify key descriptors.
+*   **t-SNE Parameter Sweeps:** Executes a grid of perplexity values (e.g., 5, 15, 30, 50) to ensure stable and reliable cluster identification.
+
+### C. Global Comparative Analysis
+*   Aggregates data across all processed fazendas to provide a comparative overview.
+*   Outputs individual reports per fazenda and a combined `global_profile` report.
