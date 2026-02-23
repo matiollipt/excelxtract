@@ -9,6 +9,13 @@ wheels/
 # Virtual environments
 .venv
 
+# Python version management
+.python-version
+
 # Data folders
 data/
 output/
+reports/
+
+# AI MD files
+GEMINI.md
