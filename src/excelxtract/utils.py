@@ -83,14 +83,18 @@ def normalize_ramo(val: Any) -> Union[str, float, None]:
     return str(val).replace(".", "").strip()
 
 
-def extract_meta_from_filename(filename: str) -> Tuple[str, str]:
+def extract_meta_from_filename(
+    filename: str, date_format: str = "%d%m%y", metadata_regex: str = r"(Flor|Fruto)"
+) -> Tuple[str, str]:
     """Extracts farm name (fazenda) and date from a standardized filename.
 
     Expected format involves parts separated by underscores, containing a
-    6-digit date (ddmmyy).
+    date string.
 
     Args:
         filename: The filename to parse.
+        date_format: The strptime format for the date part.
+        metadata_regex: Regex to remove keywords from the farm name.
 
     Returns:
         A tuple containing (fazenda_name, date_string_yyyy_mm_dd).
@@ -105,11 +109,11 @@ def extract_meta_from_filename(filename: str) -> Tuple[str, str]:
         if p.isdigit() and len(p) == 6:
             date_str = p
         else:
-            res = re.sub(r"(Flor|Fruto)", "", p, flags=re.IGNORECASE)
+            res = re.sub(metadata_regex, "", p, flags=re.IGNORECASE)
             fazenda = res.strip().lower()
 
     try:
-        date_val = datetime.strptime(date_str, "%d%m%y").strftime("%Y-%m-%d")
+        date_val = datetime.strptime(date_str, date_format).strftime("%Y-%m-%d")
     except (ValueError, TypeError):
         date_val = date_str
 

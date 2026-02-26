@@ -4,13 +4,17 @@ import os
 import pandas as pd
 from .utils import normalize_name, track_iterator, log_info
 from typing import List, Dict, Tuple
+from .config import settings, ProcessingConfig
 
 
-def classify_sheets(sheet_names: List[str]) -> Dict[str, List[str]]:
+def classify_sheets(
+    sheet_names: List[str], config: ProcessingConfig = settings
+) -> Dict[str, List[str]]:
     """Classifies Excel sheet names into categories based on keywords.
 
     Args:
         sheet_names: A list of sheet names from the workbook.
+        config: Configuration object containing sheet keywords.
 
     Returns:
         A dictionary with keys 'flor', 'fruto', 'template', 'other',
@@ -19,13 +23,14 @@ def classify_sheets(sheet_names: List[str]) -> Dict[str, List[str]]:
     classification = {"flor": [], "fruto": [], "template": [], "other": []}
     for name in sheet_names:
         sheet_name_lower = name.lower()
-        if "template" in sheet_name_lower:
-            classification["template"].append(name)
-        elif "flor" in sheet_name_lower:
-            classification["flor"].append(name)
-        elif "fruto" in sheet_name_lower:
-            classification["fruto"].append(name)
-        else:
+        matched = False
+        for category, keywords in config.sheet_keywords.items():
+            if any(kw in sheet_name_lower for kw in keywords):
+                if category in classification:
+                    classification[category].append(name)
+                    matched = True
+                    break
+        if not matched:
             classification["other"].append(name)
     return classification
 

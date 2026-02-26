@@ -24,10 +24,11 @@ def process_flor_df(
     df = pd.read_csv(file_path, header=None)
     data = df.iloc[config.flor_header_row_index :].copy()
 
-    # Forward fill metadata
-    data[1] = data[1].ffill()  # Tratamento
-    data[2] = data[2].ffill()  # Parcela
-    data[3] = data[3].ffill()  # Ramo
+    mapping = config.flor_metadata_mapping
+    # Forward fill metadata columns defined in mapping (except 'no')
+    for key in ["tratamento", "parcela", "ramo"]:
+        if key in mapping:
+            data[mapping[key]] = data[mapping[key]].ffill()
 
     features = config.flor_features
     all_rows = []
@@ -36,13 +37,13 @@ def process_flor_df(
     block_width = len(features)
 
     for _, row in data.iterrows():
-        if pd.isna(row[4]):
+        if pd.isna(row[mapping["no"]]):
             continue  # Skip if No is empty
 
-        treatment = str(row[1]).strip().lower()
-        parcela = str(row[2]).strip()
-        ramo = normalize_ramo(row[3])
-        no = str(row[4]).strip()
+        treatment = str(row[mapping["tratamento"]]).strip().lower()
+        parcela = str(row[mapping["parcela"]]).strip()
+        ramo = normalize_ramo(row[mapping["ramo"]])
+        no = str(row[mapping["no"]]).strip()
 
         for plant_id, start_col in plant_blocks:
             sample_name = (
@@ -75,8 +76,7 @@ def process_flor_df(
     # Enforce data types for efficient storage and analysis
     df_out["date"] = pd.to_datetime(df_out["date"])
 
-    cat_cols = ["fazenda", "tratamento", "parcela", "ramo", "no"]
-    for col in cat_cols:
+    for col in config.flor_categories:
         if col in df_out.columns:
             df_out[col] = df_out[col].astype("category")
 
@@ -100,9 +100,10 @@ def process_fruto_df(
     df = pd.read_csv(file_path, header=None)
     data = df.iloc[config.fruto_header_row_index :].copy()
 
-    data[1] = data[1].ffill()  # Tratamento
-    data[2] = data[2].ffill()  # Bloco
-    data[3] = data[3].ffill()  # Ramo
+    mapping = config.fruto_metadata_mapping
+    for key in ["tratamento", "bloco", "ramo"]:
+        if key in mapping:
+            data[mapping[key]] = data[mapping[key]].ffill()
 
     features = config.fruto_features
 
@@ -111,13 +112,13 @@ def process_fruto_df(
     block_width = len(features)
 
     for _, row in data.iterrows():
-        if pd.isna(row[4]):
+        if pd.isna(row[mapping["no"]]):
             continue
 
-        treatment = str(row[1]).strip().lower()
-        bloco = str(row[2]).strip()
-        ramo = normalize_ramo(row[3])
-        no = str(row[4]).strip()
+        treatment = str(row[mapping["tratamento"]]).strip().lower()
+        bloco = str(row[mapping["bloco"]]).strip()
+        ramo = normalize_ramo(row[mapping["ramo"]])
+        no = str(row[mapping["no"]]).strip()
 
         for plant_id, start_col in plant_blocks:
             # We map bloco to 'parc' to keep consistency with Flor sheets for time-series.
@@ -151,8 +152,7 @@ def process_fruto_df(
     # Enforce data types
     df_out["date"] = pd.to_datetime(df_out["date"])
 
-    cat_cols = ["fazenda", "tratamento", "bloco", "ramo", "no"]
-    for col in cat_cols:
+    for col in config.fruto_categories:
         if col in df_out.columns:
             df_out[col] = df_out[col].astype("category")
 
@@ -183,16 +183,27 @@ def process_all_csvs(
     for filename in track_iterator(all_files, description="Processing CSV files"):
         # Skip non-data files
         lower_name = filename.lower()
-        if any(x in lower_name for x in ["template", "esquemas", "print"]):
+        if any(x in lower_name for x in config.exclude_keywords):
             continue
 
         file_path = os.path.join(output_dir, filename)
-        fazenda, date = extract_meta_from_filename(filename)
+        fazenda, date = extract_meta_from_filename(
+            filename,
+            date_format=config.date_format,
+            metadata_regex=config.metadata_regex,
+        )
 
-        if "flor" in filename.lower():
+        is_flor = any(
+            kw in lower_name for kw in config.sheet_keywords.get("flor", ["flor"])
+        )
+        is_fruto = any(
+            kw in lower_name for kw in config.sheet_keywords.get("fruto", ["fruto"])
+        )
+
+        if is_flor:
             df = process_flor_df(file_path, fazenda, date, config=config)
             flor_dfs.append(df)
-        elif "fruto" in filename.lower():
+        elif is_fruto:
             df = process_fruto_df(file_path, fazenda, date, config=config)
             fruto_dfs.append(df)
 

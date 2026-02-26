@@ -2,7 +2,7 @@ import typer
 import os
 import shutil
 import pandas as pd
-from src.excelxtract import excel_to_csv_sheets, process_all_csvs, generate_report
+from src.excelxtract import excel_to_csv_sheets, process_all_csvs, generate_report, generate_agrilyzer_reports
 
 app = typer.Typer(help="ExcelXtract CLI: Phenological Data Pipeline")
 
@@ -146,8 +146,46 @@ def analyze(
             row_facet="fazenda"
         )
         typer.secho(f"Global profile successfully generated in {global_dir}", fg=typer.colors.CYAN)
+        return global_df_flor, global_df_fruto
     else:
         typer.secho("No valid data found to analyze.", fg=typer.colors.YELLOW)
+        return pd.DataFrame(), pd.DataFrame()
+
+
+@app.command()
+def agrilyzer(
+    ml_dir: str = typer.Option(
+        "output/ml_ready", "--ml-dir", "-i", help="Directory containing processed phenology data"
+    ),
+    output_dir: str = typer.Option(
+        "output/analysis/agrilyzer",
+        "--output-dir",
+        "-o",
+        help="Directory to save weather reports",
+    ),
+    start_date: str = typer.Option("20240101", help="Start date for weather data (YYYYMMDD)"),
+):
+    """Generate weather analysis and integrated phenology-weather reports."""
+    typer.echo("Running Agrilyzer Weather & Phenology Integration...")
+    
+    # Load phenology data if available for integration
+    all_flor = []
+    if os.path.exists(ml_dir):
+        for item in os.listdir(ml_dir):
+            faz_path = os.path.join(ml_dir, item)
+            if os.path.isdir(faz_path):
+                flor_path = os.path.join(faz_path, f"{item}_flor_data.csv")
+                if os.path.exists(flor_path):
+                    all_flor.append(pd.read_csv(flor_path))
+    
+    df_pheno = pd.concat(all_flor, ignore_index=True) if all_flor else None
+    
+    generate_agrilyzer_reports(
+        start_date=start_date,
+        output_dir=output_dir,
+        df_pheno=df_pheno
+    )
+    typer.secho(f"Agrilyzer reports generated in {output_dir}", fg=typer.colors.GREEN)
 
 
 @app.command()
@@ -157,26 +195,31 @@ def pipeline(
         "output", "--base-output", "-o", help="Base directory for all outputs"
     ),
     skip_rows: int = typer.Option(0, help="Rows to skip in Excel sheets"),
+    weather_start_date: str = typer.Option("20240101", help="Start date for weather data"),
 ):
     """
-    Run the complete end-to-end pipeline (Extract -> Process -> Analyze).
+    Run the complete end-to-end pipeline (Extract -> Process -> Analyze -> Agrilyzer).
     """
     csv_dir = os.path.join(base_output, "csv")
     ml_ready_dir = os.path.join(base_output, "ml_ready")
     analysis_dir = os.path.join(base_output, "analysis")
+    agrilyzer_dir = os.path.join(analysis_dir, "agrilyzer")
 
     if os.path.exists(base_output):
         typer.echo(f"Cleaning existing output directory: {base_output}")
         shutil.rmtree(base_output)
 
     # 1. Extract
-    extract(excel_path, output_dir=csv_dir, skip_rows=skip_rows)
+    extract(excel_path=excel_path, output_dir=csv_dir, skip_rows=skip_rows)
 
     # 2. Process
     process(csv_dir=csv_dir, output_dir=ml_ready_dir)
 
-    # 3. Analyze
-    analyze(ml_dir=ml_ready_dir, output_dir=analysis_dir)
+    # 3. Analyze (Phenology)
+    df_flor, _ = analyze(ml_dir=ml_ready_dir, output_dir=analysis_dir)
+
+    # 4. Agrilyzer (Weather + Integration)
+    agrilyzer(ml_dir=ml_ready_dir, output_dir=agrilyzer_dir, start_date=weather_start_date)
 
     typer.secho("\n--- Pipeline completed successfully ---", fg=typer.colors.GREEN)
 
