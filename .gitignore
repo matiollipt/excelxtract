@@ -16,6 +16,7 @@ wheels/
 data/
 output/
 notes/
+reports/
 
 # AI MD files
 GEMINI.md
